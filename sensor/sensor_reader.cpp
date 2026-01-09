@@ -1,35 +1,61 @@
-// sensor_reader.cpp
-// Simple simulated sensor reader; outputs a single JSON line to stdout.
-
 #include <iostream>
-#include <random>
+#include <cstdlib>
+#include <ctime>
 #include <chrono>
-#include <thread>
 #include <nlohmann/json.hpp>
-
-#include "sensor.h"
 
 using json = nlohmann::json;
 
-int main(int argc, char** argv) {
-    // Optionally take one argument: number of readings to produce (default 1)
-    int count = 1;
-    if (argc >= 2) {
-        try { count = std::stoi(argv[1]); }
-        catch(...) { count = 1; }
-    }
+// Structure to hold sensor values
+struct SensorReading {
+    double temperature_c;
+    double humidity;
+    long timestamp;
+};
 
-    for (int i = 0; i < count; ++i) {
-        sensor s;
-        auto sensor_data = s.transmit_data();
+class Sensor
+{
+public:
+    Sensor() {}
+    ~Sensor() {}
 
-        json j;
-        j["temperature_c"] = sensor_data.temperature_c;
-        j["humidity"] = sensor_data.humidity;
-        j["timestamp"] = sensor_data.timestamp;
-        std::cout << j.dump() << std::endl;
-        // If producing multiple readings, sleep a bit
-        if (i < count - 1) std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    SensorReading transmit_data() {
+        SensorReading r;
+
+    double base_temperature = 24.0;
+    double base_humidity    = 50.0;
+
+    // Simulate some variation
+    double temp_variation = (rand() % 100 - 50) / 100.0;
+    double hum_variation  = (rand() % 100 - 50) / 100.0;
+
+    r.temperature_c = base_temperature + temp_variation;
+    r.humidity      = base_humidity + hum_variation;
+
+    // Current timestamp
+    r.timestamp = std::chrono::duration_cast<std::chrono::seconds>(
+                      std::chrono::system_clock::now().time_since_epoch()
+                  ).count();
+
+    return r;
     }
+};
+
+int main() {
+    srand(time(NULL));
+
+    // read sensor data
+    Sensor s;
+    auto r = s.transmit_data();
+
+    // create json from read data
+    json j;
+    j["temperature_c"] = r.temperature_c;
+    j["humidity"] = r.humidity;
+    j["timestamp"] = r.timestamp;
+
+    // print output
+    std::cout << j.dump() << std::endl;
+
     return 0;
 }
